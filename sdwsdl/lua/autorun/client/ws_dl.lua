@@ -2,15 +2,15 @@
 
 if ( game.SinglePlayer() ) then return; end
 
-workshop_dl = {}
-workshop_dl.__index = workshop_dl
+wsdl = {}
+wsdl.__index = wsdl
 
 -- Local download list
 local WORKSHOP_DOWNLOAD_LIST = {}
 
 
 -- Add to the workshop download list
-function workshop_dl.Download( wsid, lindex )
+function wsdl.Download( wsid, lindex )
 
 	-- Variable to be used by FileInfo
 	local selectedID = 0
@@ -48,7 +48,7 @@ function workshop_dl.Download( wsid, lindex )
 			-- Loop until the end of the download list
 			if ( lindex && isnumber( lindex ) && ( lindex < #WORKSHOP_DOWNLOAD_LIST ) ) then
 			
-				workshop_dl.Download( nil, lindex + 1 )
+				wsdl.Download( nil, lindex + 1 )
 			
 			end
 		
@@ -101,7 +101,7 @@ local function BeginWorkshopDownloadProcess( umsg )
 		message = message.."\n\nPress \"OK\" to begin downloading the Workshop content!\nYou may also continue without downloading anything by pressing \"Cancel\"."
 	
 		-- Creates a Derma Query
-		Derma_Query( message, "Workshop", "OK", function() workshop_dl.Download( nil, 1 ) end, "Cancel" )
+		Derma_Query( message, "Workshop", "OK", function() wsdl.Download( nil, 1 ) end, "Cancel" )
 	
 	end
 

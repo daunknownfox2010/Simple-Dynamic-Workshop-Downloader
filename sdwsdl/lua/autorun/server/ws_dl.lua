@@ -2,15 +2,15 @@
 
 if ( game.SinglePlayer() ) then return; end
 
-workshop_dl = {}
-workshop_dl.__index = workshop_dl
+wsdl = {}
+wsdl.__index = wsdl
 
 -- Local download list
 local WORKSHOP_DOWNLOAD_LIST = {}
 
 
 -- Add to the workshop download list
-function workshop_dl.AddWorkshopID( id )
+function wsdl.AddWorkshopID( id )
 
 	if ( !id || !tonumber( id ) ) then return; end
 
@@ -22,7 +22,7 @@ end
 
 
 -- Remove from the workshop download list
-function workshop_dl.RemoveWorkshopID( id )
+function wsdl.RemoveWorkshopID( id )
 
 	if ( !id || !tonumber( id ) ) then return; end
 
@@ -76,7 +76,7 @@ local function wsInitialize()
 			local wsData = util.JSONToTable( file.Read( "ws.dat" ) )
 			for k, v in ipairs( wsData ) do
 			
-				workshop_dl.AddWorkshopID( v )
+				wsdl.AddWorkshopID( v )
 			
 			end
 		
@@ -90,7 +90,7 @@ local function wsInitialize()
 		
 			if ( engineAddons[ i ].mounted ) then
 			
-				workshop_dl.AddWorkshopID( engineAddons[ i ].wsid )
+				wsdl.AddWorkshopID( engineAddons[ i ].wsid )
 			
 			end
 		
