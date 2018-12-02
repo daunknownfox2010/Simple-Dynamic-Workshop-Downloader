@@ -5,6 +5,9 @@ if ( game.SinglePlayer() ) then return; end
 wsdl = {}
 wsdl.__index = wsdl
 
+-- Local variable to control whether downloading is forced or not
+local FORCE_WORKSHOP_DOWNLOADS = false
+
 -- Local download list
 local WORKSHOP_DOWNLOAD_LIST = {}
 
@@ -34,16 +37,21 @@ function wsdl.Download( wsid, lindex )
 	steamworks.FileInfo( selectedID, function( data )
 	
 		-- Creates a progress notification
-		notification.AddProgress( "WSDownload", "Downloading \""..data.title.."\"" )
+		notification.AddProgress( "WSDownload_"..selectedID, "Downloading \""..data.title.."\"" )
 	
 		-- Begin downloading the content
 		steamworks.Download( data.fileid, true, function( file )
 		
 			-- Kills the progress notification
-			notification.Kill( "WSDownload" )
+			notification.Kill( "WSDownload_"..selectedID )
 		
 			-- Mount the GMA
-			game.MountGMA( file )
+			local mounted = game.MountGMA( file )
+			if ( mounted ) then
+			
+				print( "[SDWSDL] Mounted: "..file )
+			
+			end
 		
 			-- Loop until the end of the download list
 			if ( lindex && isnumber( lindex ) && ( lindex < #WORKSHOP_DOWNLOAD_LIST ) ) then
@@ -77,11 +85,16 @@ local function BeginWorkshopDownloadProcess( umsg )
 	
 		if ( table.HasValue( WORKSHOP_DOWNLOAD_LIST, tonumber( engineAddons[ i ].wsid ) ) ) then
 		
-			if ( engineAddons[ i ].downloaded ) then
+			if ( tobool( engineAddons[ i ].downloaded ) ) then
 			
-				if ( !engineAddons[ i ].mounted ) then
+				if ( !tobool( engineAddons[ i ].mounted ) ) then
 				
-					game.MountGMA( engineAddons[ i ].file )
+					local mounted = game.MountGMA( engineAddons[ i ].file )
+					if ( mounted ) then
+					
+						print( "[SDWSDL] Mounted: "..engineAddons[ i ].file )
+					
+					end
 				
 				end
 			
@@ -96,12 +109,20 @@ local function BeginWorkshopDownloadProcess( umsg )
 	-- Need to do the cool stuff if this is non-zero
 	if ( #WORKSHOP_DOWNLOAD_LIST > 0 ) then
 	
-		-- Build the message
-		local message = "This server uses Workshop content to complete your gaming experience.\nWe've detected that your client doesn't have all the necessary Workshop addons for this server."
-		message = message.."\n\nPress \"OK\" to begin downloading the Workshop content!\nYou may also continue without downloading anything by pressing \"Cancel\"."
-	
-		-- Creates a Derma Query
-		Derma_Query( message, "Workshop", "OK", function() wsdl.Download( nil, 1 ) end, "Cancel" )
+		if ( !FORCE_WORKSHOP_DOWNLOADS ) then
+		
+			-- Build the message
+			local message = "This server uses Workshop content to complete your gaming experience.\nWe've detected that your client doesn't have all the necessary Workshop addons for this server."
+			message = message.."\n\nPress \"OK\" to begin downloading the Workshop content!\nYou may also continue without downloading anything by pressing \"Cancel\"."
+		
+			-- Creates a Derma Query
+			Derma_Query( message, "Workshop", "OK", function() wsdl.Download( nil, 1 ) end, "Cancel" )
+		
+		else
+		
+			wsdl.Download( nil, 1 )
+		
+		end
 	
 	end
 

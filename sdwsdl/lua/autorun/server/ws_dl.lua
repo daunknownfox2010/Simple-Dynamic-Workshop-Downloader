@@ -67,16 +67,32 @@ local function wsInitialize()
 	-- Dedicated servers are different, manage the different server types
 	if ( game.IsDedicated() ) then
 	
+		-- Create the sdwsdl folder
+		if ( !file.IsDir( "sdwsdl", "DATA" ) ) then file.CreateDir( "sdwsdl" ); end
+	
 		-- Create the workshop data file
-		if ( !file.Exists( "ws.dat", "DATA" ) ) then file.Write( "ws.dat", util.TableToJSON( { "XXXXXX", "XXXXXX" }, true ) ); end
+		if ( !file.Exists( "sdwsdl/ws.dat", "DATA" ) ) then file.Write( "sdwsdl/ws.dat", util.TableToJSON( { "XXXXXX", "XXXXXX" }, true ) ); end
 	
 		-- Load via the workshop data file
-		if ( file.Exists( "ws.dat", "DATA" ) ) then
+		if ( file.Exists( "sdwsdl/ws.dat", "DATA" ) ) then
 		
-			local wsData = util.JSONToTable( file.Read( "ws.dat" ) )
+			local wsData = util.JSONToTable( file.Read( "sdwsdl/ws.dat" ) )
 			for k, v in ipairs( wsData ) do
 			
 				wsdl.AddWorkshopID( v )
+			
+			end
+		
+		end
+	
+		-- Use the old resource method for the resource data file
+		-- This is for if you have content that needs to be mounted during load time
+		if ( file.Exists( "sdwsdl/rs.dat", "DATA" ) ) then
+		
+			local rsData = util.JSONToTable( file.Read( "sdwsdl/rs.dat" ) )
+			for k, v in ipairs( rsData ) do
+			
+				resource.AddWorkshop( tostring( v ) )
 			
 			end
 		
@@ -88,7 +104,7 @@ local function wsInitialize()
 		local engineAddons = engine.GetAddons()
 		for i = 1, #engineAddons do
 		
-			if ( engineAddons[ i ].mounted ) then
+			if ( tobool( engineAddons[ i ].mounted ) ) then
 			
 				wsdl.AddWorkshopID( engineAddons[ i ].wsid )
 			
