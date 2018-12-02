@@ -6,7 +6,7 @@ wsdl = {}
 wsdl.__index = wsdl
 
 -- Local variable to control whether downloading is forced or not
-local FORCE_WORKSHOP_DOWNLOADS = false
+local FORCE_WORKSHOP_DOWNLOADS = true
 
 -- Local download list
 local WORKSHOP_DOWNLOAD_LIST = {}
