@@ -44,7 +44,8 @@ end
 -- Hook into the server PlayerInitialSpawn function and send the workshop download list
 local function wsPlayerInitialSpawn( ply )
 
-	local recipientFilter = RecipientFilter():AddPlayer( ply )
+	local recipientFilter = RecipientFilter()
+	recipientFilter:AddPlayer( ply )
 
 	for k, v in ipairs( WORKSHOP_DOWNLOAD_LIST ) do
 	
