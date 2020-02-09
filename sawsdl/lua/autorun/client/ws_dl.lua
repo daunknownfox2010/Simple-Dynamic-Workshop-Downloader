@@ -82,7 +82,7 @@ local function ProcessNextQueuedWorkshopID()
 	-- Check if the addon is installed already
 	if ( IsAddonInstalled( queuedWorkshopID ) ) then
 	
-		print( "[SAWSDL] ProcessNextQueuedWorkshopID found an already installed addon, skipping" )
+		print( "[SAWSDL] Skipping Workshop ID: "..queuedWorkshopID )
 	
 		-- Remove ID from the queue and begin the next download if we can
 		table.remove( WORKSHOP_DOWNLOAD_LIST, 1 )
@@ -105,13 +105,13 @@ local function ProcessNextQueuedWorkshopID()
 	steamworks.FileInfo( queuedWorkshopID, function( data )
 	
 		-- Creates a progress notification
-		notification.AddProgress( "SAWSDL", "Downloading \""..data.title.."\"" )
+		notification.AddProgress( "SAWSDL_#"..queuedWorkshopID, "Downloading \""..data.title.."\"" )
 	
 		-- Begin downloading the content
 		steamworks.Download( data.fileid, true, function( file )
 		
 			-- Kills the progress notification
-			notification.Kill( "SAWSDL" )
+			notification.Kill( "SAWSDL_#"..queuedWorkshopID )
 		
 			-- Mount the GMA
 			local mounted = game.MountGMA( file )

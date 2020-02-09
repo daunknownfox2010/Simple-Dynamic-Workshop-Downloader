@@ -8,6 +8,9 @@ wsdl.__index = wsdl
 -- Local download list
 local WORKSHOP_DOWNLOAD_LIST = {}
 
+-- ConVar for using data files
+local sawsdl_use_data_files = CreateConVar( "sawsdl_use_data_files", 0, FCVAR_ARCHIVE, "Use the addon's data files instead of the engine's current addon return. Does not work on dedicated servers!", 0, 1 )
+
 
 -- Sync the ID over to the clients
 local function SyncWorkshopDownloadList( id, ply )
@@ -80,13 +83,10 @@ local function wsInitialize()
 	print( "-= Simple Automatic Workshop Downloader (SAWSDL) =-\n-== SAWSDL was created by D4 the (Perth) Fox ==-" )
 
 	-- Dedicated servers are different, manage the different server types
-	if ( game.IsDedicated() ) then
+	if ( game.IsDedicated() || sawsdl_use_data_files:GetBool() ) then
 	
 		-- Create the sawsdl folder
 		if ( !file.IsDir( "sawsdl", "DATA" ) ) then file.CreateDir( "sawsdl" ); end
-	
-		-- Create the workshop data file
-		if ( !file.Exists( "sawsdl/ws.dat", "DATA" ) ) then file.Write( "sawsdl/ws.dat", util.TableToJSON( { "XXXXXX", "XXXXXX" }, true ) ); end
 	
 		-- Load via the workshop data file
 		if ( file.Exists( "sawsdl/ws.dat", "DATA" ) ) then
