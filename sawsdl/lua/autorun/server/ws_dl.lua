@@ -8,10 +8,14 @@ wsdl.__index = wsdl
 -- Enables debug printing
 local DEBUG_PRINT = false
 
--- Forbidden tags that should not use the in-game downloader
-local WORKSHOP_FORBIDDEN_TAGS = {
+-- Legacy tags that should not use the in-game downloader
+local WORKSHOP_LEGACY_TAGS = {
 	[ "gamemode" ] = true,
-	[ "map" ] = true,
+	[ "map" ] = true
+}
+
+-- Forbidden tags that should not be downloaded
+local WORKSHOP_FORBIDDEN_TAGS = {
 	[ "save" ] = true,
 	[ "demo" ] = true,
 	[ "dupe" ] = true
@@ -21,7 +25,7 @@ local WORKSHOP_FORBIDDEN_TAGS = {
 local WORKSHOP_DOWNLOAD_LIST = {}
 
 -- ConVar for using data files
-local sawsdl_use_data_files = CreateConVar( "sawsdl_use_data_files", 0, FCVAR_ARCHIVE, "Use the addon's data files instead of the engine's current addon return. Does not work on dedicated servers!", 0, 1 )
+local sawsdl_use_data_files = CreateConVar( "sawsdl_use_data_files", 0, FCVAR_ARCHIVE, "Use the addon's data files instead of the engine's current addon return. Does nothing on dedicated servers!", 0, 1 )
 
 
 -- Local function to print verbosely
@@ -42,24 +46,37 @@ local function PrintVerbose( msg )
 end
 
 
--- Determines if an addon has a forbidden tag, which forces the addon to be installed over legacy resource.AddWorkshop
--- This is only ever used in listen servers, do not worry about this function on dedicated servers
-local function CheckForForbiddenTags( tags )
+-- Checks the given tags and returns something based on what it finds
+-- 0: tags met no criteria
+-- 1: tags met legacy criteria
+-- 2: tags met forbidden criteria
+local function CheckAddonTags( tags )
 
-	if ( !tags || !istable( tags ) ) then PrintVerbose( "@CheckForForbiddenTags() received an argument that wasn't a table" ); return; end
+	if ( !tags || !istable( tags ) ) then PrintVerbose( "@CheckAddonTags() failed, probably because it was given incorrect data" ); return; end
 
 	for k, v in ipairs( tags ) do
 	
 		if ( WORKSHOP_FORBIDDEN_TAGS[ string.lower( v ) ] ) then
 		
-			PrintVerbose( "@CheckForForbiddenTags() found a forbidden tag: '" .. v .. "'" )
-			return true
+			PrintVerbose( "@CheckAddonTags() found a forbidden tag: \'" .. v .. "\'" )
+			return 2
 		
 		end
 	
 	end
 
-	return false
+	for k, v in ipairs( tags ) do
+	
+		if ( WORKSHOP_LEGACY_TAGS[ string.lower( v ) ] ) then
+		
+			PrintVerbose( "@CheckAddonTags() found a legacy tag: \'" .. v .. "\'" )
+			return 1
+		
+		end
+	
+	end
+
+	return 0
 
 end
 
@@ -67,24 +84,24 @@ end
 -- Sync the ID over to the clients
 local function SyncWorkshopDownloadList( id, ply )
 
-	if ( !id || ( !isnumber( id ) && !tonumber( id ) ) ) then PrintVerbose( "Couldn't use Workshop ID: \"" .. id .. "\"" ); return; end
+	if ( !id || ( !isnumber( id ) && !tonumber( id ) ) ) then PrintVerbose( "@SyncWorkshopDownloadList() couldn't use Workshop ID: \"" .. id .. "\"" ); return; end
 	if ( !isnumber( id ) ) then id = tonumber( id ); end
 
 	local recipientFilter = RecipientFilter()
 	if ( IsValid( ply ) && ply:IsPlayer() ) then
 	
-		PrintVerbose( "Syncing \"" .. id .. "\" to player: '" .. ply:Nick() .. "'" )
+		PrintVerbose( "@SyncWorkshopDownloadList() syncing \"" .. id .. "\" to player: \'" .. ply:Nick() .. "\'" )
 		recipientFilter:AddPlayer( ply )
 	
 	else
 	
-		PrintVerbose( "Syncing \"" .. id .. "\" to all players" )
+		PrintVerbose( "@SyncWorkshopDownloadList() syncing \"" .. id .. "\" to all players" )
 		recipientFilter:AddAllPlayers()
 	
 	end
 
 	umsg.Start( "SyncWorkshopDownloadList", recipientFilter )
-		umsg.Long( id )
+		umsg.String( tostring( id ) )
 	umsg.End()
 
 end
@@ -93,15 +110,15 @@ end
 -- Add to the workshop download list
 function wsdl.AddWorkshopID( id, sync )
 
-	if ( !id || ( !isnumber( id ) && !tonumber( id ) ) ) then PrintVerbose( "Couldn't use Workshop ID: \"" .. id .. "\"" ); return; end
+	if ( !id || ( !isnumber( id ) && !tonumber( id ) ) ) then PrintVerbose( "@wsdl.AddWorkshopID() couldn't use Workshop ID: \"" .. id .. "\"" ); return; end
 	if ( !isnumber( id ) ) then id = tonumber( id ); end
 
 	if ( !table.HasValue( WORKSHOP_DOWNLOAD_LIST, id ) ) then
 	
-		PrintVerbose( "Adding Workshop ID to {WORKSHOP_DOWNLOAD_LIST}: \"" .. id .. "\"" )
+		PrintVerbose( "@wsdl.AddWorkshopID() adding Workshop ID to {WORKSHOP_DOWNLOAD_LIST}: \"" .. id .. "\"" )
 		table.insert( WORKSHOP_DOWNLOAD_LIST, id )
 	
-		if ( sync && ( sync == true ) ) then
+		if ( sync && sync == true ) then
 		
 			SyncWorkshopDownloadList( id )
 		
@@ -109,12 +126,15 @@ function wsdl.AddWorkshopID( id, sync )
 	
 	else
 	
-		PrintVerbose( "Tried adding Workshop ID to {WORKSHOP_DOWNLOAD_LIST} but it's already listed: \"" .. id .. "\"" )
+		PrintVerbose( "@wsdl.AddWorkshopID() tried adding a Workshop ID to {WORKSHOP_DOWNLOAD_LIST} but it's already listed: \"" .. id .. "\"" )
 	
 	end
 
+	-- Sorts the download list
+	table.sort( WORKSHOP_DOWNLOAD_LIST )
+
 	-- For debug purposes
-	PrintVerbose( "{WORKSHOP_DOWNLOAD_LIST} listing:" )
+	PrintVerbose( "@wsdl.AddWorkshopID() {WORKSHOP_DOWNLOAD_LIST} listing:" )
 	PrintVerbose( WORKSHOP_DOWNLOAD_LIST )
 
 end
@@ -125,7 +145,7 @@ local function wsPlayerInitialSpawn( ply )
 
 	if ( !ply:IsBot() ) then
 	
-		PrintVerbose( "Player '" .. ply:Nick() .. "' (" .. ply:SteamID() .. ") has initially spawned" )
+		PrintVerbose( "@wsPlayerInitialSpawn() ... Player \'" .. ply:Nick() .. "\' (" .. ply:SteamID() .. ") has initially spawned" )
 		for k, v in ipairs( WORKSHOP_DOWNLOAD_LIST ) do
 		
 			SyncWorkshopDownloadList( v, ply )
@@ -142,7 +162,7 @@ hook.Add( "PlayerInitialSpawn", "wsPlayerInitialSpawn", wsPlayerInitialSpawn )
 local function wsInitialize()
 
 	-- Initialize message
-	print( "-= Simple Automatic Workshop Downloader (SAWSDL) =-\n-== SAWSDL was created by D4 the (Choco) Fox ==-" )
+	print( "-= Simple Automatic Workshop Downloader (SAWSDL) =-\n-== SAWSDL was created by \'Jai the (Choco) Fox\' ==-" )
 
 	-- Dedicated servers are different, manage the different server types
 	if ( game.IsDedicated() || sawsdl_use_data_files:GetBool() ) then
@@ -169,7 +189,7 @@ local function wsInitialize()
 			local rsData = util.JSONToTable( file.Read( "sawsdl/rs.dat" ) )
 			for k, v in ipairs( rsData ) do
 			
-				PrintVerbose( "Adding Workshop ID to {LEGACY}: \"" .. v .. "\"" )
+				PrintVerbose( "@wsInitialize() adding Workshop ID to {LEGACY}: \"" .. v .. "\"" )
 				resource.AddWorkshop( tostring( v ) )
 			
 			end
@@ -186,17 +206,23 @@ local function wsInitialize()
 			local addonTags = string.Explode( ",", info.tags )
 			local addonModels = tonumber( info.models )
 			local addonMounted = tobool( info.mounted )
-			if ( addonMounted && ( addonMounted == true ) ) then
+			if ( addonMounted && addonMounted == true ) then
 			
-				PrintVerbose( "Found '" .. addonTitle .. "' as mounted: \"" .. addonWSID .. "\"" )
-				if ( ( addonModels > 0 ) && !CheckForForbiddenTags( addonTags ) ) then
+				PrintVerbose( "@wsInitialize() found \'" .. addonTitle .. "\' mounted, checking ID: \"" .. addonWSID .. "\"" )
+			
+				local addonTagCriteria = CheckAddonTags( addonTags )
+				if ( addonModels > 0 && addonTagCriteria <= 0 ) then
 				
 					wsdl.AddWorkshopID( addonWSID )
 				
+				elseif ( addonModels <= 0 || addonTagCriteria == 1 ) then
+				
+					PrintVerbose( "@wsInitialize() adding Workshop ID to {LEGACY}: \"" .. addonWSID .. "\"" )
+					resource.AddWorkshop( addonWSID )
+				
 				else
 				
-					PrintVerbose( "Adding Workshop ID to {LEGACY}: \"" .. addonWSID .. "\"" )
-					resource.AddWorkshop( addonWSID )
+					PrintVerbose( "@wsInitialize() skipped: \"" .. addonWSID .. "\"" )
 				
 				end
 			
